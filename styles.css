@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@200;300;400&display=swap');
+
+html {
+  background-image: url(https://webgradients.com/public/webgradients_png/016%20Deep%20Blue.png)
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 60px;
+}
+
+.display {
+  margin-left: 70px;
+}
+
+.text {
+  font-family: 'Mulish', sans-serif;
+  color: black;
+  text-align: center;
+}
+
+h1 {
+  letter-spacing: 8px;
+  font-size: 32pt;
+  margin-top: 25px;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 35pt;
+  margin: 20px;
+}
+
+h3 {
+  font-weight: 300;
+  font-size: 16pt;
+  margin-top: 40px;
+}
+
+h4, #start-button {
+  font-weight: 300;
+  font-size: 12pt;
+}
+
+p {
+  margin-left: 400px;
+  margin-right: 400px;
+}
+
+#start-button {
+  margin-top: 15px;
+  margin-left: 20px;
+  width: 120px;
+  height: 30px;
+  border-radius: 2px;
+  border: 1px black solid;
+  background-color: #C5F1FC;
+  color: black;
+  text-align: center;
+  transition: .4s ease;
+}
+
+#start-button:hover {
+  background-color: #FDC5F5;
+}
+
+.grid {
+  width: 200px;
+  height: 400px;
+  display: flex;
+  flex-wrap: wrap;
+  background-color: white;
+  border: white 8px solid;
+  border-radius: 10px;
+}
+
+.grid div {
+  height: 20px;
+  width: 20px;
+}
+
+.tetromino {
+  background-color: black;
+}
+
+.mini-grid {
+  margin-left: 60px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.mini-grid div {
+  width: 20px;
+  height: 20px;
+}
