@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let isFreezing = false; // ミノが設置されるかどうか
   let isPaused = false; // ゲームが一時停止かどうか
   let isGameOver = false; // ゲームオーバーかどうか
+  let freezeTimeout = null; // 設置前の猶予時間を管理
+  let isDropping = true; // ミノが下に落ちているかどうかを管理
 
   // テトリミノの定義
   const lTetromino = [
@@ -71,13 +73,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 壁を超えないかチェックする関数
+  function isAtEdge(position) {
+    return current.some(index => (position + index) % width === 0 || (position + index) % width === width - 1);
+  }
+
+  // テトリミノが壁や他のミノにぶつかるかチェックする関数
+  function isCollision(position) {
+    return current.some(index => squares[position + index].classList.contains('taken'));
+  }
+
+  // ミノが枠外に出ないように位置を調整する関数
+  function checkRotationPosition(position) {
+    // ミノが枠外に出た場合、調整
+    const isOutOfBounds = current.some(index => (position + index) % width === 0 || (position + index) % width === width - 1);
+
+    if (isOutOfBounds) {
+      if (position % width > width / 2) {
+        // 右端での回転時に枠外に出ないように左にシフト
+        return position - 1;
+      } else {
+        // 左端での回転時に枠外に出ないように右にシフト
+        return position + 1;
+      }
+    }
+
+    return position; // 問題ない場合はそのままの位置を返す
+  }
+
+  // コントロール (左移動、右移動、回転)
   function control(e) {
-    if (!isPaused && !isGameOver) { // ゲームが一時停止されておらず、ゲームオーバーでない場合のみ操作可能
-      if (e.keyCode === 37) {
+    if (!isPaused && !isGameOver) {
+      if (e.keyCode === 37 && !isAtEdge(currentPosition - 1) && !isCollision(currentPosition - 1)) {
         moveLeft();
       } else if (e.keyCode === 38) {
         rotate();
-      } else if (e.keyCode === 39) {
+      } else if (e.keyCode === 39 && !isAtEdge(currentPosition + 1) && !isCollision(currentPosition + 1)) {
         moveRight();
       } else if (e.keyCode === 40 && !isFreezing) {
         accelerate(); // 下矢印キーが押されたら加速
@@ -95,11 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keyup', stopAccelerate);
 
   function moveDown() {
-    if (!isPaused && !isGameOver) { // 一時停止されていない時、ゲームオーバーでない時のみ動かす
+    if (!isPaused && !isGameOver && isDropping) {
       undraw();
       currentPosition += width;
       draw();
-      freeze();
+      freeze(); // 着地判定
     }
   }
 
@@ -117,50 +148,61 @@ document.addEventListener('DOMContentLoaded', () => {
     timerId = setInterval(moveDown, currentSpeed); // 通常のスピードに戻す
   }
 
+  // 横移動を許可し、猶予時間を追加したfreeze関数
   function freeze() {
     if (current.some(index => squares[currentPosition + index + width].classList.contains('taken'))) {
-      isFreezing = true; // ミノが設置された
-      current.forEach(index => squares[currentPosition + index].classList.add('taken'));
-      random = nextRandom;
-      nextRandom = Math.floor(Math.random() * theTetrominoes.length);
-      current = theTetrominoes[random][currentRotation];
-      currentPosition = 3; // 固定された位置に次のミノを表示
-      draw();
-      displayShape();
-      addScore();
-      checkGameOver(); // ゲームオーバーかどうかを確認
-      resetSpeed(); // 設置された後は通常スピードに戻す
-      isFreezing = false; // 設置完了
+      if (!freezeTimeout) {
+        // ミノが落ち続けるのを停止
+        isDropping = false;
+
+        // 猶予時間中は横移動を許可
+        freezeTimeout = setTimeout(() => {
+          isFreezing = true; // ミノが設置された
+          current.forEach(index => squares[currentPosition + index].classList.add('taken'));
+          random = nextRandom;
+          nextRandom = Math.floor(Math.random() * theTetrominoes.length);
+          current = theTetrominoes[random][currentRotation];
+          currentPosition = 3; // 固定された位置に次のミノを表示
+          draw();
+          displayShape();
+          addScore();
+          checkGameOver(); // ゲームオーバーかどうかを確認
+          resetSpeed(); // 設置された後は通常スピードに戻す
+          isFreezing = false; // 設置完了
+          freezeTimeout = null; // タイマーをリセット
+          isDropping = true; // 次のミノの落下を再開
+        }, 300); // 0.3秒の猶予時間
+      }
     }
   }
 
   function moveLeft() {
     undraw();
-    const isAtLeftEdge = current.some(index => (currentPosition + index) % width === 0);
-    if (!isAtLeftEdge) currentPosition -= 1;
-    if (current.some(index => squares[currentPosition + index].classList.contains('taken'))) {
-      currentPosition += 1;
-    }
+    currentPosition -= 1;
     draw();
   }
 
   function moveRight() {
     undraw();
-    const isAtRightEdge = current.some(index => (currentPosition + index) % width === width - 1);
-    if (!isAtRightEdge) currentPosition += 1;
-    if (current.some(index => squares[currentPosition + index].classList.contains('taken'))) {
-      currentPosition -= 1;
-    }
+    currentPosition += 1;
     draw();
   }
 
+  // 回転処理
   function rotate() {
     undraw();
-    currentRotation++;
-    if (currentRotation === current.length) {
-      currentRotation = 0;
-    }
+    const originalRotation = currentRotation;
+    currentRotation = (currentRotation + 1) % current.length;
+    const newPosition = checkRotationPosition(currentPosition); // 回転後の位置を調整
     current = theTetrominoes[random][currentRotation];
+
+    // 新しい位置が枠外や他のミノにぶつからないか確認
+    if (!isCollision(newPosition) && !isAtEdge(newPosition)) {
+      currentPosition = newPosition; // 問題ない場合のみ新しい位置を反映
+    } else {
+      currentRotation = originalRotation; // 問題がある場合は元の回転に戻す
+      current = theTetrominoes[random][currentRotation]; // 元の回転に戻す
+    }
     draw();
   }
 
